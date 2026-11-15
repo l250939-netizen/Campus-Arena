@@ -8,6 +8,8 @@ CampusArena is a university-oriented platform for finding and organizing activit
 
 The accepted email domain is `nu.edu.pk`, including subdomains such as `isb.nu.edu.pk`. Registration still sets the university field to `FAST Islamabad`; accepting an email domain does not currently identify or assign a different university.
 
+Rewards and merit leaderboards are disabled in the main application for now. Their implementation is preserved on the `feature/rewards` branch, which is published to GitHub.
+
 ## Project map
 
 ```text
@@ -111,7 +113,7 @@ All paths below are relative to `/api`. “Verified” means the handler require
 | `POST /auth/login` | Public | Check credentials and return a JWT and public user data |
 | `POST /auth/logout` | Public | Return a logout acknowledgement; the client clears its in-memory auth state |
 | `GET /auth/me` | Bearer JWT | Return the authenticated user's profile |
-| `GET /auth/leaderboard` | Bearer JWT | Return the top merit-point users |
+| `GET /auth/leaderboard` | Disabled on `main` | The rewards leaderboard is preserved on `feature/rewards` |
 
 The registration validator accepts email addresses ending in `nu.edu.pk`, including subdomains, and rejects domains that merely contain similar text.
 
@@ -141,7 +143,7 @@ The schema's unique index enforces at most one review from a user for a given se
 
 | Method and path | Access | Purpose |
 |---|---|---|
-| `POST /rewards/session/:sessionId/claim` | Verified host | Award points after the session ends to participants recorded present |
+| `POST /rewards/session/:sessionId/claim` | Disabled on `main` | Reward claims are preserved on `feature/rewards` |
 
 The reward handler uses a MongoDB transaction and a unique reward record to avoid duplicate awards. Transactions require a MongoDB deployment that supports them (for example, a replica set or Atlas cluster).
 

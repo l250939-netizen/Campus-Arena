@@ -1,4 +1,9 @@
-process.env.JWT_SECRET = process.env.JWT_SECRET || "test-secret";
+process.env.NODE_ENV = "test";
+process.env.JWT_SECRET = "test-secret";
+process.env.SMTP_HOST = "";
+process.env.SMTP_USER = "";
+process.env.SMTP_PASS = "";
+jest.setTimeout(120000);
 
 const request = require("supertest");
 const mongoose = require("mongoose");

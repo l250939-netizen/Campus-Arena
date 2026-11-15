@@ -34,13 +34,16 @@ app.use(express.json());
 const sessionRoutes = require("./routes/sessionRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const authRoutes = require("./routes/authRoutes");
-const rewardRoutes = require("./routes/rewardRoutes");
 const carpoolRoutes = require("./routes/carpoolRoutes");
+
+const REWARDS_ENABLED = false;
 
 app.use("/api/auth", authRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/reviews", reviewRoutes);
-app.use("/api/rewards", rewardRoutes);
+if (REWARDS_ENABLED) {
+  app.use("/api/rewards", require("./routes/rewardRoutes"));
+}
 app.use("/api/carpools", carpoolRoutes);
 
 app.get("/api", (req, res) => {

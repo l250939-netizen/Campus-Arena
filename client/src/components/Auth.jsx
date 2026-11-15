@@ -60,11 +60,18 @@ function Auth({ user, onLogin, onLogout, onEmailVerified }) {
     window.history.replaceState({}, document.title, "/");
 
     if (!token) {
-      setError("This verification link is missing its token. Request another email.");
-      return;
+      const timer = window.setTimeout(() => {
+        setError("This verification link is missing its token. Request another email.");
+      }, 0);
+
+      return () => window.clearTimeout(timer);
     }
 
-    completeVerification(token);
+    const timer = window.setTimeout(() => {
+      completeVerification(token);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [completeVerification]);
 
   function updateForm(event) {

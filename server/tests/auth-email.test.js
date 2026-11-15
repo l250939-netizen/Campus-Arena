@@ -107,7 +107,9 @@ describe("CampusArena email verification", () => {
     const verificationToken = tokenFromMessage(mail.text);
     expect(verificationToken).toMatch(/^[a-f0-9]{64}$/i);
 
-    const user = await User.findOne({ email }).select("+verificationTokenHash");
+    const user = await User.findOne({ email }).select(
+      "+verificationTokenHash +verificationTokenExpiresAt"
+    );
     expect(user.emailVerified).toBe(false);
     expect(user.verificationTokenHash).toBe(
       crypto.createHash("sha256").update(verificationToken).digest("hex")
@@ -134,7 +136,7 @@ describe("CampusArena email verification", () => {
     expect(verifiedResponse.body.user.emailVerified).toBe(true);
 
     const user = await User.findOne({ email: response.body.user.email }).select(
-      "+verificationTokenHash"
+      "+verificationTokenHash +verificationTokenExpiresAt"
     );
     expect(user.verificationTokenHash).toBeNull();
     expect(user.verificationTokenExpiresAt).toBeNull();

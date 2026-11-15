@@ -9,6 +9,7 @@ const { isSmtpConfigured, sendEmail } = require("../utils/smtpService");
 
 const router = express.Router();
 
+const REWARDS_ENABLED = false;
 const universityEmailPattern = /^[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)*nu\.edu\.pk$/i;
 const serverConfig = getServerConfig();
 const verificationTokenLifetimeMs = 24 * 60 * 60 * 1000;
@@ -25,7 +26,7 @@ function publicUser(user) {
     university: user.university,
     gender: user.gender,
     emailVerified: user.emailVerified,
-    meritPoints: user.meritPoints,
+    ...(REWARDS_ENABLED ? { meritPoints: user.meritPoints } : {}),
   };
 }
 
@@ -165,6 +166,7 @@ router.get("/me", async (req, res) => {
   }
 });
 
+if (REWARDS_ENABLED) {
 router.get("/leaderboard", async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -201,6 +203,7 @@ router.get("/leaderboard", async (req, res) => {
     return res.status(401).json({ message: "Invalid or expired login. Please log in again." });
   }
 });
+}
 
 router.post("/register", async (req, res) => {
   try {

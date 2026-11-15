@@ -1,4 +1,8 @@
-process.env.JWT_SECRET = process.env.JWT_SECRET || "test-secret";
+process.env.NODE_ENV = "test";
+process.env.JWT_SECRET = "test-secret";
+process.env.SMTP_HOST = "";
+process.env.SMTP_USER = "";
+process.env.SMTP_PASS = "";
 
 jest.setTimeout(120000);
 
@@ -92,7 +96,7 @@ describe("CampusArena auth and session flow", () => {
     expect(sessionResponse.body.createdBy).toBeTruthy();
   });
 
-  it("returns the authenticated profile and merit leaderboard", async () => {
+  it("returns the authenticated profile without exposing disabled reward scores", async () => {
     const first = await request(app)
       .post("/api/auth/register")
       .send({
@@ -121,16 +125,6 @@ describe("CampusArena auth and session flow", () => {
       .post("/api/auth/verify-email")
       .send({ token: second.body.verificationToken });
 
-    await mongoose.connection.collection("users").updateOne(
-      { email: "ayesha@nu.edu.pk" },
-      { $set: { meritPoints: 40 } }
-    );
-
-    await mongoose.connection.collection("users").updateOne(
-      { email: "bilal@nu.edu.pk" },
-      { $set: { meritPoints: 25 } }
-    );
-
     const loginResponse = await request(app)
       .post("/api/auth/login")
       .send({
@@ -147,13 +141,11 @@ describe("CampusArena auth and session flow", () => {
       .set("Authorization", `Bearer ${loginResponse.body.token}`);
 
     expect(profileResponse.status).toBe(200);
-    expect(profileResponse.body.user.meritPoints).toBe(40);
-    expect(leaderboardResponse.status).toBe(200);
-    expect(leaderboardResponse.body[0].fullName).toBe("Ayesha Ali");
-    expect(leaderboardResponse.body[0].meritPoints).toBeGreaterThanOrEqual(25);
+    expect(profileResponse.body.user).not.toHaveProperty("meritPoints");
+    expect(leaderboardResponse.status).toBe(404);
   });
 
-  it("lets a session creator finalize merit points only after attendance is recorded", async () => {
+  it("keeps reward claims unavailable on the main application", async () => {
     const host = await request(app)
       .post("/api/auth/register")
       .send({
@@ -241,13 +233,12 @@ describe("CampusArena auth and session flow", () => {
       .post(`/api/rewards/session/${sessionId}/claim`)
       .set("Authorization", `Bearer ${hostLogin.body.token}`);
 
-    expect(rewardClaimResponse.status).toBe(200);
-    expect(rewardClaimResponse.body.studentsRewarded).toBe(1);
+    expect(rewardClaimResponse.status).toBe(404);
 
     const attendeeProfile = await request(app)
       .get("/api/auth/me")
       .set("Authorization", `Bearer ${attendeeLogin.body.token}`);
 
-    expect(attendeeProfile.body.user.meritPoints).toBe(10);
+    expect(attendeeProfile.body.user).not.toHaveProperty("meritPoints");
   });
 });
