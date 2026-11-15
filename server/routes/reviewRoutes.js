@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const Review = require("../models/Review");
 const Session = require("../models/Session");
 const authMiddleware = require("../middleware/authMiddleware");
+const requireVerifiedUser = require("../middleware/requireVerifiedUser");
 
 const router = express.Router();
 
@@ -59,7 +60,7 @@ router.get("/session/:sessionId", async (req, res) => {
 });
 
 // POST a review for a completed session
-router.post("/session/:sessionId", authMiddleware, async (req, res) => {
+router.post("/session/:sessionId", authMiddleware, requireVerifiedUser, async (req, res) => {
   try {
     const { sessionId } = req.params;
     const rating = Number(req.body.rating);

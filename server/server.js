@@ -1,58 +1,54 @@
 
-const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
-require("dotenv").config();
+const app = require("./app");
+const { getServerConfig } = require("./config");
+const { verifySmtpConnection } = require("./utils/smtpService");
 
-const app = express();
-
-app.use(cors({ origin: "http://localhost:5173" }));
-app.use(express.json());
-const sessionRoutes = require("./routes/sessionRoutes");
-const reviewRoutes = require("./routes/reviewRoutes");
-const authRoutes = require("./routes/authRoutes");
-const rewardRoutes = require("./routes/rewardRoutes");
-
-app.use("/api/auth", authRoutes);
-
-app.use("/api/sessions", sessionRoutes);
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/rewards", rewardRoutes);
-
-app.get("/api", (req, res) => {
-  res.json({
-    message: "CampusArena API is running!"
-  });
-});
-
-const PORT = process.env.PORT || 5000;
+const config = getServerConfig();
+const PORT = config.port;
 
 async function startServer() {
   try {
     if (!process.env.JWT_SECRET) {
-  throw new Error("JWT_SECRET is missing from .env");
-}
+      throw new Error("JWT_SECRET is missing from .env");
+    }
 
     if (!process.env.MONGO_URI) {
       throw new Error("MONGO_URI is missing from .env");
     }
 
-    // Connect to MongoDB first
+    if (config.isProduction) {
+      const requiredProductionVars = ["APP_URL", "SMTP_HOST", "SMTP_USER", "SMTP_PASS"];
+      const missing = requiredProductionVars.filter((key) => !process.env[key]);
+
+      if (missing.length > 0) {
+        throw new Error(`Missing production env vars: ${missing.join(", ")}`);
+      }
+
+      if (new URL(config.appUrl).protocol !== "https:") {
+        throw new Error("APP_URL must use HTTPS in production.");
+      }
+    }
+
     await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 10000
+      serverSelectionTimeoutMS: 10000,
+      autoIndex: true,
     });
 
     console.log("MongoDB connected successfully!");
+    await verifySmtpConnection();
 
-    // Start Express only after MongoDB connects
     app.listen(PORT, () => {
       console.log(`CampusArena server running on port ${PORT}`);
     });
-
   } catch (error) {
     console.error("MongoDB connection failed:", error.message);
     process.exit(1);
   }
 }
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { startServer };

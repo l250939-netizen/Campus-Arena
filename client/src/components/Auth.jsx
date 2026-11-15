@@ -1,20 +1,71 @@
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { API_BASE_URL } from "../config";
 
-const API_URL = "http://localhost:5000/api/auth";
+const API_URL = `${API_BASE_URL}/api/auth`;
 
-function Auth({ user, onLogin, onLogout }) {
+function Auth({ user, onLogin, onLogout, onEmailVerified }) {
   const [mode, setMode] = useState("login");
 
   const [form, setForm] = useState({
     fullName: "",
     email: "",
     password: "",
+    gender: "Prefer not to say",
   });
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [verificationToken, setVerificationToken] = useState("");
+  const verificationLinkHandled = useRef(false);
+
+  const completeVerification = useCallback(async (token) => {
+    setSubmitting(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await fetch(`${API_URL}/verify-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not verify this email.");
+      }
+
+      setVerificationToken("");
+      setMessage(data.message || "Email verified successfully. You can now log in.");
+      onEmailVerified?.(data.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [onEmailVerified]);
+
+  useEffect(() => {
+    if (verificationLinkHandled.current || window.location.pathname !== "/verify-email") {
+      return;
+    }
+
+    verificationLinkHandled.current = true;
+    const token = new URLSearchParams(window.location.search).get("token");
+    window.history.replaceState({}, document.title, "/");
+
+    if (!token) {
+      setError("This verification link is missing its token. Request another email.");
+      return;
+    }
+
+    completeVerification(token);
+  }, [completeVerification]);
 
   function updateForm(event) {
     const { name, value } = event.target;
@@ -33,7 +84,41 @@ function Auth({ user, onLogin, onLogout }) {
       fullName: "",
       email: "",
       password: "",
+      gender: "Prefer not to say",
     });
+  }
+
+  async function handleResendVerification() {
+    if (!user || !user.email) {
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await fetch(`${API_URL}/resend-verification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: user.email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not resend verification email.");
+      }
+
+      setMessage(data.message || "Verification email sent.");
+      setVerificationToken(data.verificationToken || "");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleSubmit(event) {
@@ -44,8 +129,7 @@ function Auth({ user, onLogin, onLogout }) {
     setMessage("");
 
     try {
-      const endpoint =
-        mode === "register" ? "/register" : "/login";
+      const endpoint = mode === "register" ? "/register" : "/login";
 
       const payload =
         mode === "register"
@@ -53,7 +137,9 @@ function Auth({ user, onLogin, onLogout }) {
               fullName: form.fullName.trim(),
               email: form.email.trim(),
               password: form.password,
+              confirmPassword: form.password,
               university: "FAST Islamabad",
+              gender: form.gender,
             }
           : {
               email: form.email.trim(),
@@ -75,15 +161,15 @@ function Auth({ user, onLogin, onLogout }) {
       }
 
       if (mode === "register") {
-        setMessage(
-          "Account created! You can now log in. Email verification will be added later."
-        );
+        setMessage(data.message || "Account created. Please verify your email.");
+        setVerificationToken(data.verificationToken || "");
 
         setMode("login");
         setForm({
           fullName: "",
           email: form.email,
           password: "",
+          gender: "Prefer not to say",
         });
       } else {
         onLogin(data.user, data.token);
@@ -91,6 +177,7 @@ function Auth({ user, onLogin, onLogout }) {
           fullName: "",
           email: "",
           password: "",
+          gender: "Prefer not to say",
         });
       }
     } catch (err) {
@@ -98,6 +185,27 @@ function Auth({ user, onLogin, onLogout }) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function renderLocalVerification() {
+    if (!verificationToken) {
+      return null;
+    }
+
+    return (
+      <div className="verification-token">
+        <p>Development verification token</p>
+        <code>{verificationToken}</code>
+        <button
+          type="button"
+          className="secondary-action"
+          onClick={() => completeVerification(verificationToken)}
+          disabled={submitting}
+        >
+          {submitting ? "Verifying..." : "Verify email"}
+        </button>
+      </div>
+    );
   }
 
   if (user) {
@@ -111,6 +219,21 @@ function Auth({ user, onLogin, onLogout }) {
           Email verification:{" "}
           {user.emailVerified ? "Verified" : "Not verified yet"}
         </p>
+
+        {!user.emailVerified && (
+          <button
+            type="button"
+            className="secondary-action"
+            onClick={handleResendVerification}
+            disabled={submitting}
+          >
+            {submitting ? "Sending..." : "Send verification email"}
+          </button>
+        )}
+
+        {message && <p className="success-message">{message}</p>}
+        {error && <p className="error-message">{error}</p>}
+        {renderLocalVerification()}
 
         <button
           type="button"
@@ -176,11 +299,26 @@ function Auth({ user, onLogin, onLogout }) {
             name="email"
             value={form.email}
             onChange={updateForm}
-            placeholder="your-id@nu.edu.pk"
+            placeholder="your-id@isb.nu.edu.pk"
             autoComplete="email"
             required
           />
         </label>
+
+        {mode === "register" && (
+          <label>
+            Gender
+            <select
+              name="gender"
+              value={form.gender}
+              onChange={updateForm}
+            >
+              <option value="Prefer not to say">Prefer not to say</option>
+              <option value="Female">Female</option>
+              <option value="Male">Male</option>
+            </select>
+          </label>
+        )}
 
         <label>
           Password
@@ -216,10 +354,10 @@ function Auth({ user, onLogin, onLogout }) {
 
       {message && <p className="success-message">{message}</p>}
       {error && <p className="error-message">{error}</p>}
+      {renderLocalVerification()}
 
       <p className="auth-footnote">
-        Currently available for FAST Islamabad students.
-        University email ownership verification is coming soon.
+        Currently available for FAST Islamabad students. Email verification is required before creating or joining campus sessions.
       </p>
     </section>
   );

@@ -30,9 +30,27 @@ const userSchema = new mongoose.Schema(
       default: "FAST Islamabad",
     },
 
+    gender: {
+      type: String,
+      enum: ["Female", "Male", "Prefer not to say"],
+      default: "Prefer not to say",
+    },
+
     emailVerified: {
       type: Boolean,
       default: false,
+    },
+
+    verificationTokenHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
+
+    verificationTokenExpiresAt: {
+      type: Date,
+      default: null,
+      select: false,
     },
 
     meritPoints: {

@@ -5,6 +5,7 @@ const User = require("../models/User");
 const Session = require("../models/Session");
 const SessionReward = require("../models/SessionReward");
 const authMiddleware = require("../middleware/authMiddleware");
+const requireVerifiedUser = require("../middleware/requireVerifiedUser");
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ const POINTS_PER_SESSION = 10;
 // Claim merit points for a completed session.
 // Only the session creator can trigger rewards.
 // The reward record prevents duplicate awards.
-router.post("/session/:sessionId/claim", authMiddleware, async (req, res) => {
+router.post("/session/:sessionId/claim", authMiddleware, requireVerifiedUser, async (req, res) => {
   const mongoSession = await mongoose.startSession();
 
   try {
@@ -54,13 +55,21 @@ router.post("/session/:sessionId/claim", authMiddleware, async (req, res) => {
         throw error;
       }
 
-      // Only students who joined are eligible.
+      const attendanceMap = new Map(
+        (session.attendance || [])
+          .filter((entry) => entry && entry.present)
+          .map((entry) => [entry.user.toString(), true])
+      );
+
       const participantIds = [
-        ...new Set(session.participants.map((id) => id.toString())),
+        ...new Set(
+          session.participants
+            .filter((id) => attendanceMap.has(id.toString()))
+            .map((id) => id.toString())
+        ),
       ];
 
       for (const participantId of participantIds) {
-        // Unique index: one reward per user per session.
         const existingReward = await SessionReward.findOne({
           session: session._id,
           user: participantId,
@@ -90,7 +99,10 @@ router.post("/session/:sessionId/claim", authMiddleware, async (req, res) => {
     });
 
     return res.json({
-      message: `Rewards finalized. ${awardedCount} student(s) received points.`,
+      message:
+        awardedCount > 0
+          ? `Rewards finalized. ${awardedCount} student(s) received points.`
+          : "No attendance was recorded for this session, so no merit points were awarded.",
       pointsPerStudent: POINTS_PER_SESSION,
       studentsRewarded: awardedCount,
     });

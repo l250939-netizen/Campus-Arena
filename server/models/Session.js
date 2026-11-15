@@ -56,6 +56,23 @@ const sessionSchema = new mongoose.Schema(
       min: 2
     },
 
+    attendance: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User"
+        },
+        present: {
+          type: Boolean,
+          default: false
+        },
+        markedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ],
+
     studyDetails: {
   topic: String,
   department: String,

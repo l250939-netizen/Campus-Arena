@@ -1,7 +1,8 @@
 const authMiddleware = require("../middleware/authMiddleware");
+const requireVerifiedUser = require("../middleware/requireVerifiedUser");
 const express = require("express");
+const mongoose = require("mongoose");
 const Session = require("../models/Session");
-
 
 const router = express.Router();
 
@@ -41,7 +42,7 @@ router.get("/my", authMiddleware, async (req, res) => {
 
 // POST: Create a new Session
 
-router.post("/", authMiddleware, async (req, res) => {
+router.post("/", authMiddleware, requireVerifiedUser, async (req, res) => {
   try {
     const session = await Session.create({
   ...req.body,
@@ -59,7 +60,7 @@ router.post("/", authMiddleware, async (req, res) => {
 
 
 // POST: Join a Session
-router.post("/:id/join", authMiddleware, async (req, res) => {
+router.post("/:id/join", authMiddleware, requireVerifiedUser, async (req, res) => {
   try {
     const session = await Session.findById(req.params.id);
 
@@ -107,8 +108,75 @@ if (totalPeople >= session.maxParticipants) {
   }
 });
 
+// POST: Record attendance for a joined participant
+router.post("/:id/attendance", authMiddleware, requireVerifiedUser, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { participantId, attended } = req.body;
+
+    const session = await Session.findById(id);
+
+    if (!session) {
+      return res.status(404).json({ message: "Session not found." });
+    }
+
+    if (!session.createdBy.equals(req.user._id)) {
+      return res.status(403).json({
+        message: "Only the host can record attendance for this session."
+      });
+    }
+
+    const endTime =
+      new Date(session.startTime).getTime() +
+      Number(session.durationMinutes) * 60 * 1000;
+
+    if (Date.now() < endTime) {
+      return res.status(400).json({
+        message: "Attendance can only be recorded after the session ends."
+      });
+    }
+
+    if (!participantId || !mongoose.Types.ObjectId.isValid(participantId)) {
+      return res.status(400).json({ message: "A valid participant ID is required." });
+    }
+
+    const participantExists = session.participants.some((userId) => userId.equals(participantId));
+
+    if (!participantExists) {
+      return res.status(400).json({ message: "This student did not join the session." });
+    }
+
+    const attendanceEntry = session.attendance.find(
+      (entry) => entry.user && entry.user.toString() === participantId
+    );
+
+    const present = Boolean(attended);
+
+    if (attendanceEntry) {
+      attendanceEntry.present = present;
+      attendanceEntry.markedAt = new Date();
+    } else {
+      session.attendance.push({
+        user: participantId,
+        present,
+        markedAt: new Date(),
+      });
+    }
+
+    await session.save();
+
+    return res.json({
+      message: present ? "Attendance recorded." : "Attendance updated.",
+      attendance: session.attendance,
+    });
+  } catch (error) {
+    console.error("Attendance update error:", error);
+    return res.status(500).json({ message: "Failed to record attendance." });
+  }
+});
+
 // PATCH: Edit a Session (creator only)
-router.patch("/:id", authMiddleware, async (req, res) => {
+router.patch("/:id", authMiddleware, requireVerifiedUser, async (req, res) => {
   try {
     const session = await Session.findById(req.params.id);
 
@@ -168,7 +236,7 @@ router.patch("/:id", authMiddleware, async (req, res) => {
 
 
 // DELETE: Cancel a Session (creator only)
-router.delete("/:id", authMiddleware, async (req, res) => {
+router.delete("/:id", authMiddleware, requireVerifiedUser, async (req, res) => {
   try {
     const session = await Session.findById(req.params.id);
 
