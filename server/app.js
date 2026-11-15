@@ -36,14 +36,11 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const authRoutes = require("./routes/authRoutes");
 const carpoolRoutes = require("./routes/carpoolRoutes");
 
-const REWARDS_ENABLED = false;
-
 app.use("/api/auth", authRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/reviews", reviewRoutes);
-if (REWARDS_ENABLED) {
-  app.use("/api/rewards", require("./routes/rewardRoutes"));
-}
+// Rewards are paused on main; preserve the route for later reactivation.
+// app.use("/api/rewards", require("./routes/rewardRoutes"));
 app.use("/api/carpools", carpoolRoutes);
 
 app.get("/api", (req, res) => {

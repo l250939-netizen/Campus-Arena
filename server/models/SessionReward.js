@@ -1,4 +1,8 @@
 
+/*
+Reward model paused on main. The complete implementation is preserved on
+the feature/rewards branch for future reactivation.
+
 const mongoose = require("mongoose");
 
 const sessionRewardSchema = new mongoose.Schema(
@@ -41,3 +45,4 @@ sessionRewardSchema.index(
 );
 
 module.exports = mongoose.model("SessionReward", sessionRewardSchema);
+*/

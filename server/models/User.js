@@ -53,10 +53,11 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
 
-    meritPoints: {
-      type: Number,
-      default: 0,
-    },
+    // Rewards paused on main; restore this field with the feature/rewards branch.
+    // meritPoints: {
+    //   type: Number,
+    //   default: 0,
+    // },
   },
   { timestamps: true }
 );

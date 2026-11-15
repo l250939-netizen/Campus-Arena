@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { API_BASE_URL } from "./config";
 import "./App.css";
 
-const REWARDS_ENABLED = false;
+// Rewards are paused on main. Restore from the feature/rewards branch.
 
 const categories = [
   "Futsal",
@@ -138,7 +138,7 @@ const [mySessionsError, setMySessionsError] = useState("");
 
 const [user, setUser] = useState(null);
 const [authToken, setAuthToken] = useState(null);
-const [leaderboard, setLeaderboard] = useState([]);
+// const [leaderboard, setLeaderboard] = useState([]);
 function handleLogin(userData, token) {
   setUser(userData);
   setAuthToken(token);
@@ -146,7 +146,7 @@ function handleLogin(userData, token) {
 function handleEmailVerified(userData) {
   setUser((previous) => (previous ? { ...previous, ...userData } : previous));
 }
-const [finalizingRewards, setFinalizingRewards] = useState({});
+// const [finalizingRewards, setFinalizingRewards] = useState({});
 const [editingSession, setEditingSession] = useState(null);
 const [editForm, setEditForm] = useState({});
 const [sessionToCancel, setSessionToCancel] = useState(null);
@@ -165,7 +165,6 @@ function handleLogout() {
   setUser(null);
   setAuthToken(null);
   setMySessions([]);
-  setLeaderboard([]);
   setMySessionsError("");
 }
 
@@ -194,6 +193,7 @@ const loadProfile = useCallback(async (token) => {
   }
 }, []);
 
+/*
 async function loadLeaderboard(token) {
   if (!REWARDS_ENABLED || !token) {
     setLeaderboard([]);
@@ -218,6 +218,7 @@ async function loadLeaderboard(token) {
     console.error("Load leaderboard error:", error);
   }
 }
+*/
 
 async function loadSessionReviews(sessionId) {
   try {
@@ -438,12 +439,8 @@ async function submitSessionReview(event, sessionId) {
     const timer = window.setTimeout(() => {
       if (authToken) {
         loadProfile(authToken);
-        if (REWARDS_ENABLED) {
-          loadLeaderboard(authToken);
-        }
         loadMyCarpools(authToken);
       } else {
-        setLeaderboard([]);
         setMyCarpools([]);
       }
     }, 0);
@@ -938,6 +935,7 @@ async function joinSession(sessionId) {
     }
   };
 
+  /*
   const finalizeRewards = async (sessionId) => {
     if (!REWARDS_ENABLED || !authToken) return;
 
@@ -973,6 +971,7 @@ async function joinSession(sessionId) {
       setFinalizingRewards((previous) => ({ ...previous, [sessionId]: false }));
     }
   };
+  */
 
   return (
     <main>
@@ -1007,12 +1006,12 @@ async function joinSession(sessionId) {
             <h2>{user.fullName}</h2>
             <p>{user.email}</p>
             <div className="profile-stats">
-              {REWARDS_ENABLED && (
-                <div>
-                  <span className="stat-label">Merit points</span>
-                  <strong>{user.meritPoints ?? 0}</strong>
-                </div>
-              )}
+              {/*
+              <div>
+                <span className="stat-label">Merit points</span>
+                <strong>{user.meritPoints ?? 0}</strong>
+              </div>
+              */}
               <div>
                 <span className="stat-label">Verification</span>
                 <strong>{user.emailVerified ? "Verified" : "Pending"}</strong>
@@ -1020,37 +1019,28 @@ async function joinSession(sessionId) {
             </div>
           </div>
 
-          {REWARDS_ENABLED && (
-            <div className="leaderboard-card">
-              <p className="auth-eyebrow">LEADERBOARD</p>
-              <h2>Top campus contributors</h2>
-
-              {leaderboard.length === 0 ? (
-                <p className="empty-state">
-                  No merit points yet. Join a session to get started.
-                </p>
-              ) : (
-                <ol className="leaderboard-list">
-                  {leaderboard.map((entry) => (
-                    <li key={entry.id} className="leaderboard-item">
-                      <span className="rank-badge">#{entry.rank}</span>
-                      <div>
-                        <strong>{entry.fullName}</strong>
-                        <small>
-                          {entry.emailVerified
-                            ? "Verified"
-                            : "Awaiting verification"}
-                        </small>
-                      </div>
-                      <span className="points-pill">
-                        {entry.meritPoints} pts
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </div>
-          )}
+          {/*
+          <div className="leaderboard-card">
+            <p className="auth-eyebrow">LEADERBOARD</p>
+            <h2>Top campus contributors</h2>
+            {leaderboard.length === 0 ? (
+              <p className="empty-state">No merit points yet. Join a session to get started.</p>
+            ) : (
+              <ol className="leaderboard-list">
+                {leaderboard.map((entry) => (
+                  <li key={entry.id} className="leaderboard-item">
+                    <span className="rank-badge">#{entry.rank}</span>
+                    <div>
+                      <strong>{entry.fullName}</strong>
+                      <small>{entry.emailVerified ? "Verified" : "Awaiting verification"}</small>
+                    </div>
+                    <span className="points-pill">{entry.meritPoints} pts</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+          */}
         </section>
       )}
 
@@ -1964,7 +1954,8 @@ async function joinSession(sessionId) {
   new Date(session.startTime).getTime() +
     Number(session.durationMinutes) * 60 * 1000 && (
   <>
-    {REWARDS_ENABLED && user && session.createdBy === user._id && (
+    {/*
+    {user && session.createdBy === user._id && (
       <div className="session-rewards">
         <button
           type="button"
@@ -1978,6 +1969,7 @@ async function joinSession(sessionId) {
         </button>
       </div>
     )}
+    */}
 
   <div className="session-reviews">
     <h3>Session Reviews</h3>

@@ -1,4 +1,8 @@
 
+/*
+Rewards API paused on main. The complete implementation is preserved on
+the feature/rewards branch for future reactivation.
+
 const express = require("express");
 const mongoose = require("mongoose");
 const User = require("../models/User");
@@ -120,3 +124,4 @@ router.post("/session/:sessionId/claim", authMiddleware, requireVerifiedUser, as
 });
 
 module.exports = router;
+*/
